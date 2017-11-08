@@ -1,0 +1,6 @@
+<resources>
+<string name="app_name">BowlingProto</string>
+<string name="add_score">Add Score to frame</string>
+<string name="first_throw">First Throw Score</string>
+<string name="second_throw">Second Throw Score</string>
+</resources>
