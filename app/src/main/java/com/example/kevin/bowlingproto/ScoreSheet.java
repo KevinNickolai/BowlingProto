@@ -1,23 +1,20 @@
 package com.example.kevin.bowlingproto;
 
-
+        import android.graphics.Color;
         import android.support.v7.app.AppCompatActivity;
         import android.os.Bundle;
-        import android.text.Editable;
-        import android.text.TextWatcher;
         import android.view.View;
         import android.widget.Button;
-        import android.widget.EditText;
+        import android.widget.ImageButton;
         import android.widget.TextView;
         import java.util.Vector;
-        import android.text.InputFilter;
-        import android.text.Spanned;
-
-/**
- * Created by npatel on 4/5/2016.
- */
 
 public class ScoreSheet extends AppCompatActivity {
+
+    //image buttons for our ten pins
+    private ImageButton onePin, twoPin, threePin, fourPin, fivePin,
+                        sixPin, sevenPin, eightPin, ninePin, tenPin;
+
 
     //enumeration describing the frame's different states.
     enum FrameState { Incomplete, Open, Closed}
@@ -29,44 +26,9 @@ public class ScoreSheet extends AppCompatActivity {
 
     private TextView m_frameNumber;
     private TextView m_scoreSoFar;
-    private EditText m_firstThrow;
-    private EditText m_secondThrow;
+
     private Button m_previousFrame;
     private Button m_nextFrame;
-
-    private ScoreListener m_firstThrowScoreListener;
-    private ScoreListener m_secondThrowScoreListener;
-
-    //from https://capdroidandroid.wordpress.com/2016/04/07/set-minimum-maximum-value-in-edittext-android/
-    //to limit edittext input to 0-10
-    public class MinMaxFilter implements InputFilter {
-
-        private int mIntMin, mIntMax;
-
-        public MinMaxFilter(int minValue, int maxValue) {
-            this.mIntMin = minValue;
-            this.mIntMax = maxValue;
-        }
-
-        public MinMaxFilter(String minValue, String maxValue) {
-            this.mIntMin = Integer.parseInt(minValue);
-            this.mIntMax = Integer.parseInt(maxValue);
-        }
-
-        @Override
-        public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
-            try {
-                int input = Integer.parseInt(dest.toString() + source.toString());
-                if (isInRange(mIntMin, mIntMax, input))
-                    return null;
-            } catch (NumberFormatException nfe) { }
-            return "";
-        }
-
-        private boolean isInRange(int a, int b, int c) {
-            return b > a ? c >= a && c <= b : c >= b && c <= a;
-        }
-    }
 
     private class Game
     {
@@ -109,19 +71,6 @@ public class ScoreSheet extends AppCompatActivity {
         {
             int totalScore = 0;
 
-            Frame frameToAdd;
-
-            //add the score up until the frame that we're on, or up until the 9th frame.
-            for(int i = 0; i < GetCurrentFrame().frameNumber && i < 9; ++i)
-            {
-                //the score to add from the frame
-                frameToAdd = m_frames.elementAt(i);
-                if(frameToAdd.frameState != FrameState.Incomplete)
-                {
-
-                }
-            }
-
             return totalScore;
         }
 
@@ -161,20 +110,17 @@ public class ScoreSheet extends AppCompatActivity {
         //class that describes a frame of bowling
         private class Frame
         {
+            //array of pins to tell us whether they are standing or knocked down
+            private boolean[] pins;
+
             //the game this frame is in.
             Game m_game;
-
-            //the two throws in a frame
-            protected Throw firstThrow, secondThrow;
 
             //the current state of the frame.
             protected FrameState frameState;
 
             //the number of this frame
             protected int frameNumber;
-
-            //the score of this frame
-            protected int frameScore;
 
             //constructor for a single frame.
             public Frame(Game game,int frame)
@@ -184,157 +130,26 @@ public class ScoreSheet extends AppCompatActivity {
                 //initialize the frameNumber
                 frameNumber = frame;
 
-                //initialize the two throws
-                firstThrow = new Throw(this, true);
-                secondThrow = new Throw(this,false);
-
                 //set our current frame state to incomplete.
                 frameState = FrameState.Incomplete;
-            }
 
-            public void CloseFrame()
-            {
-                frameState = FrameState.Closed;
+                pins = new boolean[10];
 
-            }
-
-            public void OpenFrame()
-            {
-                frameState = FrameState.Open;
-                frameScore = firstThrow.m_score + secondThrow.m_score;
-            }
-
-            //class that describes a single throw in bowling
-            protected class Throw
-            {
-                //the frame we're a part of
-                Frame m_frame;
-
-                //flag to indicate if this is the first throw of the frame
-                boolean isFirstThrow;
-
-                //the m_score of this throw
-                private int m_score;
-
-                //the type of throw this throw is
-                private ThrowType throwType;
-
-                public void setScore(int score)
-                {
-                    m_score = score;
-
-                    /**override this in TenthFrame
-                     //checking if we're in the tenth frame
-                     if(throwToScore.m_frame.frameNumber == 10)
-                     {
-                     if(enteredScore == 10)
-                     {
-                     throwToScore.throwType = ThrowType.Strike;
-                     }
-                     else if(enteredScore == 0)
-                     {
-                     throwToScore.throwType = ThrowType.Gutter;
-                     }
-                     else
-                     {
-                     throwToScore.throwType = ThrowType.None;
-                     }
-                     }*/
-                    if(isFirstThrow)
-                    {
-                        if(m_score == 10)
-                        {
-                            throwType = ThrowType.Strike;
-                            m_frame.frameState = FrameState.Closed;
-                        }
-                        else if(m_score == 0)
-                        {
-                            throwType = ThrowType.Gutter;
-                        }
-                        else
-                        {
-                            throwType = ThrowType.None;
-                        }
-                    }
-                    else //second throw
-                    {
-                        //is the overall m_score of the two throws of this frame 10
-                        if(m_score + m_frame.firstThrow.m_score == 10)
-                        {
-                            throwType = ThrowType.Spare;
-                            m_frame.frameState = FrameState.Closed;
-                        }
-                        else if(m_score == 0)
-                        {
-                            throwType = ThrowType.Gutter;
-                            m_frame.frameState = FrameState.Open;
-                        }
-                        else
-                        {
-                            throwType = ThrowType.None;
-                            m_frame.frameState = FrameState.Open;
-                        }
-                    }
-                }
-
-                //constructor for a Throw
-                public Throw(Frame frame, boolean firstThrow)
-                {
-                    //we have no m_score yet.
-                    m_score = 0;
-
-                    //this throw was just initilized, and hasn't been thrown yet.
-                    throwType = ThrowType.NotThrown;
-
-                    //initialize the flag for first throw.
-                    isFirstThrow = firstThrow;
-                }
+                //initialize all pins as standing
+                for(int i = 0; i < pins.length;++i)
+                    pins[i] = true;
             }
         }
 
         //class that inheirits from Frame, describes the 10th frame
         private class TenthFrame extends Frame
         {
-            //the potential third throw of the tenth frame
-            protected Throw thirdThrow;
 
             //constructor for 10th frame
             public TenthFrame(Game game)
             {
                 //construct the frame as the 10th & initilize the 3rd throw.
                 super(game,10);
-                thirdThrow = new Throw(this,false);
-            }
-        }
-    }
-
-    //using https://stackoverflow.com/questions/8543449/how-to-use-the-textwatcher-class-in-android/42951863#42951863
-    //as a reference to create my own listener of the m_score editText elements.
-    private class ScoreListener implements TextWatcher{
-
-        //the throw that we are changing the m_score of
-        private Game.Frame.Throw throwToScore;
-
-        public void setThrowToScore(Game.Frame.Throw toScore) {throwToScore = toScore;}
-
-        @Override
-        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-        }
-
-        @Override
-        public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-        }
-
-        @Override
-        public void afterTextChanged(Editable s) {
-            try {
-                int enteredScore = Integer.decode(s.toString());
-                throwToScore.setScore(enteredScore);
-                m_game.UpdateScores();
-            } catch (NumberFormatException e) {
-                s.clear();
             }
         }
     }
@@ -350,16 +165,6 @@ public class ScoreSheet extends AppCompatActivity {
         //associate all views.
         InitializeViews();
 
-        //setting up the m_score listeners & input filters
-        m_firstThrowScoreListener = new ScoreListener();
-        m_secondThrowScoreListener = new ScoreListener();
-
-        m_firstThrow.addTextChangedListener(m_firstThrowScoreListener);
-        m_firstThrow.setFilters(new InputFilter[]{ new MinMaxFilter("0", "10")});
-
-        m_secondThrow.addTextChangedListener(m_secondThrowScoreListener);
-        m_secondThrow.setFilters(new InputFilter[]{ new MinMaxFilter("0", "10")});
-
         //setup the UI to our current frame.
         SetupUI(m_game.GetCurrentFrame());
     }
@@ -372,10 +177,20 @@ public class ScoreSheet extends AppCompatActivity {
         //associating all of our views
         m_frameNumber = (TextView)findViewById(R.id.textViewFrameNumber);
         m_scoreSoFar = (TextView)findViewById(R.id.textViewFrameTotalScore);
-        m_firstThrow = (EditText)findViewById(R.id.editTextFrameFirstThrow);
-        m_secondThrow = (EditText)findViewById(R.id.editTextFrameSecondThrow);
         m_previousFrame = (Button)findViewById(R.id.buttonPreviousFrame);
         m_nextFrame = (Button)findViewById(R.id.buttonNextFrame);
+
+        //initialize all ImageButtons to a set pin
+        onePin = (ImageButton)findViewById(R.id.imgBtnOnePin);
+        twoPin = (ImageButton)findViewById(R.id.imgBtnTwoPin);
+        threePin = (ImageButton)findViewById(R.id.imgBtnThreePin);
+        fourPin = (ImageButton)findViewById(R.id.imgBtnFourPin);
+        fivePin = (ImageButton)findViewById(R.id.imgBtnFivePin);
+        sixPin = (ImageButton)findViewById(R.id.imgBtnSixPin);
+        sevenPin = (ImageButton)findViewById(R.id.imgBtnSevenPin);
+        eightPin = (ImageButton)findViewById(R.id.imgBtnEightPin);
+        ninePin = (ImageButton)findViewById(R.id.imgBtnNinePin);
+        tenPin = (ImageButton)findViewById(R.id.imgBtnTenPin);
     }
 
     public void onPreviousFrame(View view)
@@ -393,10 +208,6 @@ public class ScoreSheet extends AppCompatActivity {
     //sets up the UI based on the frame we're on
     private void SetupUI(Game.Frame frame)
     {
-        //set our listeners to m_score the new frame's throws.
-        m_firstThrowScoreListener.setThrowToScore(frame.firstThrow);
-        m_secondThrowScoreListener.setThrowToScore(frame.secondThrow);
-
         //set our frame number text view
         m_frameNumber.setText("Frame " + frame.frameNumber);
 
@@ -417,33 +228,52 @@ public class ScoreSheet extends AppCompatActivity {
             m_previousFrame.setEnabled(true);
         }
 
-        //if the first throw hasn't been done yet
-        if(frame.firstThrow.throwType == ThrowType.NotThrown)
+        SetPins();
+
+    }
+
+    private void SetPins()
+    {
+        Game.Frame frame = m_game.GetCurrentFrame();
+
+        //pins are enabled if the frame isn't done yet
+        boolean pinEnabled = (frame.frameState == FrameState.Incomplete);
+
+        SetPin(frame.pins[0],onePin,pinEnabled);
+        SetPin(frame.pins[1],twoPin,pinEnabled);
+        SetPin(frame.pins[2],threePin,pinEnabled);
+        SetPin(frame.pins[3],fourPin,pinEnabled);
+        SetPin(frame.pins[4],fivePin,pinEnabled);
+        SetPin(frame.pins[5],sixPin,pinEnabled);
+        SetPin(frame.pins[6],sevenPin,pinEnabled);
+        SetPin(frame.pins[7],eightPin,pinEnabled);
+        SetPin(frame.pins[8],ninePin,pinEnabled);
+        SetPin(frame.pins[9],tenPin,pinEnabled);
+    }
+
+    private void SetPin(boolean pinStanding, ImageButton pinmage,boolean enabled)
+    {
+        //reset pin filter
+        pinmage.clearColorFilter();
+
+        //if the pin isn't standing, mark it as not standing
+        if(!pinStanding)
+            pinmage.setColorFilter(Color.GREEN);
+
+        pinmage.setEnabled(enabled);
+    }
+
+    public void pinClicked(View view)
+    {
+        switch (view)
         {
-            //set m_firstThrow & m_secondThrow texts to nothing
-            m_firstThrow.setText("",TextView.BufferType.EDITABLE);
-
-            //set the second throw text to be disabled due to a first throw not happening yet.
-            m_secondThrow.setText("",TextView.BufferType.EDITABLE);
-            m_secondThrow.setEnabled(false);
+            case onePin:
+                break;
         }
-        else //the first throw has been completed.
-        {
-            //set the text of the first throw editText to the first throw's m_score
-            m_firstThrow.setText(((Integer)(frame.firstThrow.m_score)).toString(), TextView.BufferType.EDITABLE);
+    }
 
-            //make sure that the secondThrow is enabled since we have a first throw.
-            m_secondThrow.setEnabled(true);
+    private void ChangePin(int pin)
+    {
 
-            //if our second throw hasn't been thrown, display no text for it
-            if (frame.secondThrow.throwType != ThrowType.NotThrown)
-            {
-                m_secondThrow.setText("", TextView.BufferType.EDITABLE);
-            }
-            else
-            {
-                m_secondThrow.setText(((Integer)(frame.secondThrow.m_score)).toString(), TextView.BufferType.EDITABLE);
-            }
-        }
     }
 }

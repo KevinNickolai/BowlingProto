@@ -6,49 +6,131 @@
     android:layout_height="match_parent"
     tools:context="com.example.kevin.bowlingproto.ScoreSheet">
 
-    <EditText
-        android:id="@+id/editTextFrameFirstThrow"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:ems="10"
-        android:maxLength="2"
-        android:hint="@string/first_throw"
-        android:inputType="number"
-        android:textAlignment="center"
-        app:layout_constraintBaseline_toBaselineOf="@+id/editTextFrameSecondThrow"
-        app:layout_constraintEnd_toStartOf="@+id/editTextFrameSecondThrow"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <EditText
-        android:id="@+id/editTextFrameSecondThrow"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:ems="10"
-        android:maxLength="2"
-        android:hint="@string/second_throw"
-        android:inputType="textPersonName"
-        android:textAlignment="center"
+    <ImageButton
+        android:id="@+id/imgBtnOnePin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="172dp"
+        android:layout_marginEnd="128dp"
+        android:layout_marginStart="128dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/editTextFrameFirstThrow"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnTwoPin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        android:layout_marginStart="64dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnOnePin"
+        app:layout_constraintEnd_toStartOf="@+id/imgBtnThreePin"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnThreePin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        android:layout_marginEnd="64dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnOnePin"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/imgBtnTwoPin"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnFourPin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        android:layout_marginStart="32dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnTwoPin"
+        app:layout_constraintEnd_toStartOf="@+id/imgBtnFivePin"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnSixPin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        android:layout_marginEnd="32dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnThreePin"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/imgBtnFivePin"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnFivePin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnTwoPin"
+        app:layout_constraintEnd_toStartOf="@+id/imgBtnSixPin"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/imgBtnFourPin"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnEightPin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnFivePin"
+        app:layout_constraintEnd_toStartOf="@+id/imgBtnNinePin"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/imgBtnSevenPin"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnTenPin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnSixPin"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/imgBtnNinePin"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnNinePin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnFivePin"
+        app:layout_constraintEnd_toStartOf="@+id/imgBtnTenPin"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/imgBtnEightPin"
+        app:srcCompat="@drawable/pin" />
+
+    <ImageButton
+        android:id="@+id/imgBtnSevenPin"
+        android:layout_width="80"
+        android:layout_height="80"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintBottom_toTopOf="@+id/imgBtnFourPin"
+        app:layout_constraintEnd_toStartOf="@+id/imgBtnEightPin"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/pin" />
 
     <TextView
         android:id="@+id/textViewFrameTotalScore"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="128dp"
+        android:layout_marginBottom="72dp"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.501"
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
@@ -62,9 +144,10 @@
         android:textAlignment="viewStart"
         app:layout_constraintBottom_toTopOf="@+id/textViewFrameTotalScore"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.501"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.561" />
+        app:layout_constraintVertical_bias="0.941" />
 
     <Button
         android:id="@+id/buttonNextFrame"
@@ -87,5 +170,12 @@
         android:text="Previous Frame"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_begin="20dp" />
 
 </android.support.constraint.ConstraintLayout>
