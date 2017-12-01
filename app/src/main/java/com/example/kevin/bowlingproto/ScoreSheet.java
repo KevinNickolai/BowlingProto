@@ -17,19 +17,27 @@ public class ScoreSheet extends AppCompatActivity {
 
 
     //enumeration describing the frame's different states.
-    enum FrameState { Incomplete, Open, Closed}
+    enum FrameState { Incomplete, Open, Strike,Spare}
 
     //enumeration describing the different types of throws.
-    enum ThrowType { Split, Strike, Spare, Foul, Gutter, None, NotThrown }
+    //enum ThrowType { Split, Strike, Spare, Foul, Gutter, None, NotThrown }
 
+    //the game we're currently playing
     public Game m_game;
 
+    //frame information
     private TextView m_frameNumber;
     private TextView m_scoreSoFar;
 
+    //buttons for navigation around the game
     private Button m_previousFrame;
     private Button m_nextFrame;
+    private Button m_resetFrame;
+    private Button m_nextThrow;
 
+    /**
+     * Class that describes one game of bowling
+     */
     private class Game
     {
         //a vector of our frames
@@ -51,7 +59,7 @@ public class ScoreSheet extends AppCompatActivity {
         //move to the next frame, and return it.
         public Frame NextFrame()
         {
-            //increment to the next frame if their is one
+            //increment to the next frame if there is one
             if(m_currentFrame < 9)
                 ++m_currentFrame;
 
@@ -90,28 +98,14 @@ public class ScoreSheet extends AppCompatActivity {
             m_currentFrame = 0;
         }
 
-        public void UpdateScores() {
-            Frame frameToUpdate;
-            for(int i = 0; i < 9; ++i)
-            {
-                frameToUpdate = m_frames.elementAt(i);
-
-                if(frameToUpdate.firstThrow.throwType == ThrowType.Strike)
-                {
-
-                }
-                else if(frameToUpdate.secondThrow.throwType == ThrowType.Spare)
-                {
-
-                }
-            }
-        }
-
         //class that describes a frame of bowling
         private class Frame
         {
             //array of pins to tell us whether they are standing or knocked down
             private boolean[] pins;
+
+            private int firstThrow, secondThrow;
+            private boolean isFirstThrow;
 
             //the game this frame is in.
             Game m_game;
@@ -122,7 +116,11 @@ public class ScoreSheet extends AppCompatActivity {
             //the number of this frame
             protected int frameNumber;
 
-            //constructor for a single frame.
+            /**
+             * Constructor for a frame
+             * @param game The game this frame is a part of
+             * @param frame the number of the frame.
+             */
             public Frame(Game game,int frame)
             {
                 m_game = game;
@@ -133,11 +131,85 @@ public class ScoreSheet extends AppCompatActivity {
                 //set our current frame state to incomplete.
                 frameState = FrameState.Incomplete;
 
-                pins = new boolean[10];
+                //start on the first throw
+                isFirstThrow = true;
 
                 //initialize all pins as standing
+                pins = new boolean[10];
                 for(int i = 0; i < pins.length;++i)
                     pins[i] = true;
+            }
+
+            public void ResetFrame()
+            {
+                isFirstThrow = true;
+                firstThrow = 0;
+                secondThrow = 0;
+                for(int i = 0; i < pins.length;++i)
+                    pins[i] = true;
+            }
+
+            /**
+             * Sweeps pins out of the frame
+             * @return true if no pins are standing
+             */
+            public boolean SweepPins()
+            {
+                //if a pin isn't standing, disable it
+                onePin.setEnabled(pins[0]);
+                twoPin.setEnabled(pins[1]);
+                threePin.setEnabled(pins[2]);
+                fourPin.setEnabled(pins[3]);
+                fivePin.setEnabled(pins[4]);
+                sixPin.setEnabled(pins[5]);
+                sevenPin.setEnabled(pins[6]);
+                eightPin.setEnabled(pins[7]);
+                ninePin.setEnabled(pins[8]);
+                tenPin.setEnabled(pins[9]);
+
+                boolean noPinsStanding = true;
+                int score = 0;
+                for(int i = 0; i < pins.length;++i)
+                {
+                    //if a pin is standing, then this can't be a strike or spare
+                    if(pins[i])
+                    {
+                        noPinsStanding = false;
+                    }
+                    else //pin knocked down, add it to the score
+                    {
+                        ++score;
+                    }
+                }
+
+                if(isFirstThrow)
+                    firstThrow = score;
+                else
+                    secondThrow = score;
+
+                //strike or spare
+                if(noPinsStanding)
+                {
+                    if (isFirstThrow)
+                        frameState = FrameState.Strike;
+                    else
+                        frameState = FrameState.Spare;
+
+                    //extra throws
+                    if(frameNumber == 10)
+                    {
+
+                    }
+                }
+                else
+                {
+                    if(isFirstThrow)
+                        isFirstThrow = false;
+                    else
+                        frameState = FrameState.Open;
+                }
+
+                return noPinsStanding;
             }
         }
 
@@ -179,6 +251,8 @@ public class ScoreSheet extends AppCompatActivity {
         m_scoreSoFar = (TextView)findViewById(R.id.textViewFrameTotalScore);
         m_previousFrame = (Button)findViewById(R.id.buttonPreviousFrame);
         m_nextFrame = (Button)findViewById(R.id.buttonNextFrame);
+        m_resetFrame = (Button)findViewById(R.id.buttonResetFrame);
+        m_nextThrow = (Button)findViewById(R.id.buttonNextThrow);
 
         //initialize all ImageButtons to a set pin
         onePin = (ImageButton)findViewById(R.id.imgBtnOnePin);
@@ -193,26 +267,59 @@ public class ScoreSheet extends AppCompatActivity {
         tenPin = (ImageButton)findViewById(R.id.imgBtnTenPin);
     }
 
+    /**
+     * Displays the previous frame in the game.
+     * @param view the view clicked to cause this event
+     */
     public void onPreviousFrame(View view)
     {
         //setup the new frame
         SetupUI(m_game.PreviousFrame());
     }
 
+    /**
+     * Displays the next frame in the game.
+     * @param view the view clicked to cause this event
+     */
     public void onNextFrame(View view)
     {
         //setup the new frame
         SetupUI(m_game.NextFrame());
     }
 
-    //sets up the UI based on the frame we're on
+    public void onResetFrame(View view)
+    {
+        m_game.GetCurrentFrame().ResetFrame();
+        SetupUI(m_game.GetCurrentFrame());
+    }
+
+    public void onNextThrow(View view)
+    {
+        Game.Frame frame = m_game.GetCurrentFrame();
+
+        if(frame.isFirstThrow)
+        {
+            //strike
+            if(frame.SweepPins());
+                SetupUI(m_game.NextFrame());
+        }
+        else //second throw
+        {
+            SetupUI(m_game.NextFrame());
+        }
+    }
+
+    /**
+     * Setup UI based on a frame
+     * @param frame to set the UI for
+     */
     private void SetupUI(Game.Frame frame)
     {
         //set our frame number text view
         m_frameNumber.setText("Frame " + frame.frameNumber);
 
         //setting our score so far for the game up until this point.
-        m_scoreSoFar.setText(m_game.GetTotalScoreToFrame(frame));
+        //m_scoreSoFar.setText(m_game.GetTotalScoreToFrame(frame));
         //if our frame number is one, then we cannot go to a previous frame.
         if(frame.frameNumber == 1)
         {
@@ -224,12 +331,11 @@ public class ScoreSheet extends AppCompatActivity {
         }
         else //otherwise, we are can go back and forth on frames and should re-enable those butons.
         {
-            m_nextFrame.setEnabled(true);
+            m_nextFrame.setEnabled(false);
             m_previousFrame.setEnabled(true);
         }
 
         SetPins();
-
     }
 
     private void SetPins()
@@ -237,18 +343,22 @@ public class ScoreSheet extends AppCompatActivity {
         Game.Frame frame = m_game.GetCurrentFrame();
 
         //pins are enabled if the frame isn't done yet
-        boolean pinEnabled = (frame.frameState == FrameState.Incomplete);
+        boolean frameComplete = (frame.frameState != FrameState.Incomplete);
 
-        SetPin(frame.pins[0],onePin,pinEnabled);
-        SetPin(frame.pins[1],twoPin,pinEnabled);
-        SetPin(frame.pins[2],threePin,pinEnabled);
-        SetPin(frame.pins[3],fourPin,pinEnabled);
-        SetPin(frame.pins[4],fivePin,pinEnabled);
-        SetPin(frame.pins[5],sixPin,pinEnabled);
-        SetPin(frame.pins[6],sevenPin,pinEnabled);
-        SetPin(frame.pins[7],eightPin,pinEnabled);
-        SetPin(frame.pins[8],ninePin,pinEnabled);
-        SetPin(frame.pins[9],tenPin,pinEnabled);
+        if(frameComplete)
+        {
+
+        }
+        SetPin(frame.pins[0],onePin,!frameComplete);
+        SetPin(frame.pins[1],twoPin,!frameComplete);
+        SetPin(frame.pins[2],threePin,!frameComplete);
+        SetPin(frame.pins[3],fourPin,!frameComplete);
+        SetPin(frame.pins[4],fivePin,!frameComplete);
+        SetPin(frame.pins[5],sixPin,!frameComplete);
+        SetPin(frame.pins[6],sevenPin,!frameComplete);
+        SetPin(frame.pins[7],eightPin,!frameComplete);
+        SetPin(frame.pins[8],ninePin,!frameComplete);
+        SetPin(frame.pins[9],tenPin,!frameComplete);
     }
 
     private void SetPin(boolean pinStanding, ImageButton pinmage,boolean enabled)
@@ -263,17 +373,48 @@ public class ScoreSheet extends AppCompatActivity {
         pinmage.setEnabled(enabled);
     }
 
-    public void pinClicked(View view)
+    public void ChangePin(View view)
     {
-        switch (view)
+        int vID = view.getId();
+        if(vID == onePin.getId())
         {
-            case onePin:
-                break;
+            SetPin(m_game.GetCurrentFrame().pins[0],onePin,true);
         }
-    }
-
-    private void ChangePin(int pin)
-    {
-
+        else if(vID == twoPin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[1],twoPin,true);
+        }
+        else if(vID == threePin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[2],threePin,true);
+        }
+        else if(vID == fourPin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[3],fourPin,true);
+        }
+        else if(vID == fivePin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[4],fivePin,true);
+        }
+        else if(vID == sixPin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[5],sixPin,true);
+        }
+        else if(vID == sevenPin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[6],sevenPin,true);
+        }
+        else if(vID == eightPin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[7],eightPin,true);
+        }
+        else if(vID == ninePin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[8],ninePin,true);
+        }
+        else if(vID == tenPin.getId())
+        {
+            SetPin(m_game.GetCurrentFrame().pins[9],tenPin,true);
+        }
     }
 }
