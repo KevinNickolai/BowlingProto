@@ -17,10 +17,7 @@ public class ScoreSheet extends AppCompatActivity {
 
 
     //enumeration describing the frame's different states.
-    enum FrameState { Incomplete, Open, Strike,Spare}
-
-    //enumeration describing the different types of throws.
-    //enum ThrowType { Split, Strike, Spare, Foul, Gutter, None, NotThrown }
+    enum FrameState {None, Open, Strike, Spare}
 
     //the game we're currently playing
     public Game m_game;
@@ -46,8 +43,11 @@ public class ScoreSheet extends AppCompatActivity {
         //the index in m_frames of the current frame we're on.
         private int m_currentFrame;
 
-        //move to the previous frame, and return it.
-        public Frame PreviousFrame()
+        /**
+         * back up to previous frame
+         * @return the frame previous to the current one.
+         */
+        private Frame PreviousFrame()
         {
             //decrement to the previous frame if there is one.
             if(m_currentFrame > 0)
@@ -56,8 +56,11 @@ public class ScoreSheet extends AppCompatActivity {
             return m_frames.elementAt(m_currentFrame);
         }
 
-        //move to the next frame, and return it.
-        public Frame NextFrame()
+        /**
+         * move to the next frame
+         * @return the frame after the current one
+         */
+        private Frame NextFrame()
         {
             //increment to the next frame if there is one
             if(m_currentFrame < 9)
@@ -66,8 +69,62 @@ public class ScoreSheet extends AppCompatActivity {
             return m_frames.elementAt(m_currentFrame);
         }
 
-        //get the frame that is currently being displayed
-        public Frame GetCurrentFrame(){ return m_frames.elementAt(m_currentFrame); }
+        /**
+         * Get the currently played frame
+         * @return the current frame
+         */
+        private Frame GetCurrentFrame(){ return m_frames.elementAt(m_currentFrame); }
+
+        private void UpdatePreviousFrameScores()
+        {
+
+            //checking if a previous frame index exists
+            if((m_currentFrame - 1) >= 0)
+            {
+                Frame previousFrame = m_frames.elementAt(m_currentFrame-1);
+                switch(previousFrame.frameState)
+                {
+                    //if the previous frame was a spare, then add this frame's first throw to that spare
+                    case Spare:
+                        previousFrame.frameScore += GetCurrentFrame().firstThrow;
+                        previousFrame.scoreKnown = true;
+                        break;
+
+                    //if the previous frame was a strike, there are a few different checks for an updated score for it.
+                    case Strike:
+
+                        //we are guarenteed to add the current frame first throw if the previous frame was a strike
+                        previousFrame.frameScore += GetCurrentFrame().firstThrow;
+
+                        //if the current frame wasn't a strike, we have a second throw to add to the previous
+                        if(GetCurrentFrame().frameState != FrameState.Strike)
+                        {
+                            previousFrame.frameScore += GetCurrentFrame().secondThrow;
+
+                            //since we know this frame was two throws, the previous frame strike score is known.
+                            previousFrame.scoreKnown = true;
+                        }
+                        //we don't set the previousFrame.scoreKnown to true if the current frame was a strike;
+                        //since both are strikes, there is another throw we need to account for, when considering the previous frame score.
+
+
+                        //in the case of a previous frame strike, we need to check the frame before that as well for a strike.
+                        if((m_currentFrame - 2) >= 0) //does that frame exist?
+                        {
+                            //frame exists, check it for strike.
+                            Frame beforePreviousFrame = m_frames.elementAt(m_currentFrame - 2);
+                            if(beforePreviousFrame.frameState == FrameState.Strike)
+                            {
+                                //if that frame was a strike, we add the first throw of the current frame
+                                beforePreviousFrame.frameScore += GetCurrentFrame().firstThrow;
+
+                                //the score is now known
+                                beforePreviousFrame.scoreKnown = true;
+                            }
+                        }
+                }
+            }
+        }
 
         /**
          * Get the total score of the game up until this frame's score
@@ -79,19 +136,34 @@ public class ScoreSheet extends AppCompatActivity {
         {
             int totalScore = 0;
 
+            for(int i = 0; i < frame.frameNumber; ++i)
+            {
+                //score is known for this frame, add its score to the total
+                if(m_frames.elementAt(i).scoreKnown)
+                {
+                    totalScore += m_frames.elementAt(i).frameScore;
+                }
+                else //since the score isn't known for a frame, it can't be known for frames after it.
+                {
+                    return -1;
+                }
+            }
+
             return totalScore;
         }
 
         //constructor for our game.
-        public Game()
+        private Game()
         {
             //initialize our frames
             m_frames = new Vector<Frame>();
+
             for(int i = 0; i < 9; ++i)
             {
                 //initialize all frames with their respective frameNumbers, 1-9
                 m_frames.add(new Frame(this,i+1));
             }
+
             m_frames.add(new TenthFrame(this));
 
             //the frame we start on is the first frame, located at index 0.
@@ -104,8 +176,12 @@ public class ScoreSheet extends AppCompatActivity {
             //array of pins to tell us whether they are standing or knocked down
             private boolean[] pins;
 
-            private int firstThrow, secondThrow;
-            private boolean isFirstThrow;
+            protected boolean complete;
+
+            protected int firstThrow, secondThrow;
+            protected boolean isFirstThrow;
+            protected boolean scoreKnown;
+            protected int frameScore;
 
             //the game this frame is in.
             Game m_game;
@@ -129,10 +205,19 @@ public class ScoreSheet extends AppCompatActivity {
                 frameNumber = frame;
 
                 //set our current frame state to incomplete.
-                frameState = FrameState.Incomplete;
+                frameState = FrameState.None;
 
                 //start on the first throw
                 isFirstThrow = true;
+
+                //our first two throws are 0
+                firstThrow = secondThrow = 0;
+
+                //the score for this frame isn't known yet
+                scoreKnown = false;
+
+                //frame is currently incomplete.
+                complete = false;
 
                 //initialize all pins as standing
                 pins = new boolean[10];
@@ -140,11 +225,15 @@ public class ScoreSheet extends AppCompatActivity {
                     pins[i] = true;
             }
 
-            public void ResetFrame()
+            /**
+             * Reset the elements of the frame
+             */
+            protected void ResetFrame()
             {
                 isFirstThrow = true;
                 firstThrow = 0;
                 secondThrow = 0;
+                frameState = FrameState.None;
                 for(int i = 0; i < pins.length;++i)
                     pins[i] = true;
             }
@@ -153,22 +242,13 @@ public class ScoreSheet extends AppCompatActivity {
              * Sweeps pins out of the frame
              * @return true if no pins are standing
              */
-            public boolean SweepPins()
+            protected boolean SweepPins()
             {
-                //if a pin isn't standing, disable it
-                onePin.setEnabled(pins[0]);
-                twoPin.setEnabled(pins[1]);
-                threePin.setEnabled(pins[2]);
-                fourPin.setEnabled(pins[3]);
-                fivePin.setEnabled(pins[4]);
-                sixPin.setEnabled(pins[5]);
-                sevenPin.setEnabled(pins[6]);
-                eightPin.setEnabled(pins[7]);
-                ninePin.setEnabled(pins[8]);
-                tenPin.setEnabled(pins[9]);
-
+                // return flag, if no pins are standing then indicate that
                 boolean noPinsStanding = true;
+
                 int score = 0;
+
                 for(int i = 0; i < pins.length;++i)
                 {
                     //if a pin is standing, then this can't be a strike or spare
@@ -194,12 +274,6 @@ public class ScoreSheet extends AppCompatActivity {
                         frameState = FrameState.Strike;
                     else
                         frameState = FrameState.Spare;
-
-                    //extra throws
-                    if(frameNumber == 10)
-                    {
-
-                    }
                 }
                 else
                 {
@@ -209,6 +283,9 @@ public class ScoreSheet extends AppCompatActivity {
                         frameState = FrameState.Open;
                 }
 
+                //set the pins for this frame back down.
+                SetPins(this);
+
                 return noPinsStanding;
             }
         }
@@ -216,16 +293,39 @@ public class ScoreSheet extends AppCompatActivity {
         //class that inheirits from Frame, describes the 10th frame
         private class TenthFrame extends Frame
         {
+            //flag for the extra throw in the frame.
+            boolean extraThrow;
+
+            //third throw score
+            int thirdThrow;
+
+            @Override
+            protected void ResetFrame()
+            {
+                super.ResetFrame();
+                extraThrow = false;
+                thirdThrow = 0;
+            }
 
             //constructor for 10th frame
             public TenthFrame(Game game)
             {
                 //construct the frame as the 10th & initilize the 3rd throw.
                 super(game,10);
+
+                //can have an extra throw on the 10th frame, not by default though; need spare or strike in frame.
+                extraThrow = false;
+
+                //initialize the score for that third throw as 0.
+                thirdThrow = 0;
             }
         }
     }
 
+    /**
+     * Function called on instantiation of this activity
+     * @param savedInstanceState a previously saved instance of the activity
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -283,29 +383,51 @@ public class ScoreSheet extends AppCompatActivity {
      */
     public void onNextFrame(View view)
     {
+        //if this frame isn't currently complete and next frame is clicked, this frame is complete.
+        if(!m_game.GetCurrentFrame().complete)
+        {
+            m_game.GetCurrentFrame().complete = true;
+            m_game.UpdatePreviousFrameScores();
+        }
+
         //setup the new frame
         SetupUI(m_game.NextFrame());
     }
 
+    /**
+     * Reset the current frame being bowled.
+     * @param view the view which called this function
+     */
     public void onResetFrame(View view)
     {
-        m_game.GetCurrentFrame().ResetFrame();
-        SetupUI(m_game.GetCurrentFrame());
+        Game.Frame frame = m_game.GetCurrentFrame();
+        frame.ResetFrame();
+        SetupUI(frame);
     }
 
+    /**
+     * Moves the frame to the next throw
+     * @param view the view that called this function
+     */
     public void onNextThrow(View view)
     {
         Game.Frame frame = m_game.GetCurrentFrame();
 
+        //sweep pins if this throw is complete
+        boolean noPinsStanding = frame.SweepPins();
         if(frame.isFirstThrow)
         {
             //strike
-            if(frame.SweepPins());
+            if(noPinsStanding)
                 SetupUI(m_game.NextFrame());
         }
         else //second throw
         {
-            SetupUI(m_game.NextFrame());
+            //enable next frame button
+            m_nextFrame.setEnabled(true);
+
+            //disable next throw button
+            m_nextThrow.setEnabled(false);
         }
     }
 
@@ -318,102 +440,159 @@ public class ScoreSheet extends AppCompatActivity {
         //set our frame number text view
         m_frameNumber.setText("Frame " + frame.frameNumber);
 
-        //setting our score so far for the game up until this point.
-        //m_scoreSoFar.setText(m_game.GetTotalScoreToFrame(frame));
-        //if our frame number is one, then we cannot go to a previous frame.
-        if(frame.frameNumber == 1)
+        //enable the next frame button if this frame is already complete; disable if incomplete.
+        m_nextFrame.setEnabled(frame.complete);
+
+        //enable the reset frame button only if the frame is incomplete.
+        m_resetFrame.setEnabled(!frame.complete);
+
+        //on the first frame, there are no other frames to go back to; disable previous frame button on the first frame only.
+        m_previousFrame.setEnabled(frame.frameNumber != 1);
+
+        //enable the next throw button if we're on the first throw of the frame.
+        m_nextThrow.setEnabled(frame.isFirstThrow);
+
+        //setting score
+        int score = m_game.GetTotalScoreToFrame(m_game.GetCurrentFrame());
+
+        //score not yet known
+        if(score == -1)
         {
-            m_previousFrame.setEnabled(false);
+            m_scoreSoFar.setText("");
         }
-        else if(frame.frameNumber == 10) //if frame number is 10, cannot go to next frame.
+        else
         {
-            m_nextFrame.setEnabled(false);
-        }
-        else //otherwise, we are can go back and forth on frames and should re-enable those butons.
-        {
-            m_nextFrame.setEnabled(false);
-            m_previousFrame.setEnabled(true);
+            m_scoreSoFar.setText(score);
         }
 
-        SetPins();
+        //set the pins for this frame.
+        SetPins(frame);
     }
 
-    private void SetPins()
+    /**
+     * Set the pins up on the UI
+     * @param frame the frame we want to display pins for
+     */
+    private void SetPins(Game.Frame frame)
     {
-        Game.Frame frame = m_game.GetCurrentFrame();
-
-        //pins are enabled if the frame isn't done yet
-        boolean frameComplete = (frame.frameState != FrameState.Incomplete);
-
-        if(frameComplete)
+        //if the frame is complete, no pins should be enabled.
+        if(frame.complete)
         {
-
+            SetPin(frame.pins[0], onePin, false);
+            SetPin(frame.pins[1], twoPin, false);
+            SetPin(frame.pins[2], threePin, false);
+            SetPin(frame.pins[3], fourPin, false);
+            SetPin(frame.pins[4], fivePin, false);
+            SetPin(frame.pins[5], sixPin, false);
+            SetPin(frame.pins[6], sevenPin, false);
+            SetPin(frame.pins[7], eightPin, false);
+            SetPin(frame.pins[8], ninePin, false);
+            SetPin(frame.pins[9], tenPin, false);
         }
-        SetPin(frame.pins[0],onePin,!frameComplete);
-        SetPin(frame.pins[1],twoPin,!frameComplete);
-        SetPin(frame.pins[2],threePin,!frameComplete);
-        SetPin(frame.pins[3],fourPin,!frameComplete);
-        SetPin(frame.pins[4],fivePin,!frameComplete);
-        SetPin(frame.pins[5],sixPin,!frameComplete);
-        SetPin(frame.pins[6],sevenPin,!frameComplete);
-        SetPin(frame.pins[7],eightPin,!frameComplete);
-        SetPin(frame.pins[8],ninePin,!frameComplete);
-        SetPin(frame.pins[9],tenPin,!frameComplete);
+        else if(frame.isFirstThrow) //on the first throw, all pins enabled
+        {
+            //for each pin, if the frame is not complete, then the pin should be enabled.
+            SetPin(frame.pins[0], onePin, true);
+            SetPin(frame.pins[1], twoPin, true);
+            SetPin(frame.pins[2], threePin, true);
+            SetPin(frame.pins[3], fourPin, true);
+            SetPin(frame.pins[4], fivePin, true);
+            SetPin(frame.pins[5], sixPin, true);
+            SetPin(frame.pins[6], sevenPin, true);
+            SetPin(frame.pins[7], eightPin, true);
+            SetPin(frame.pins[8], ninePin, true);
+            SetPin(frame.pins[9], tenPin, true);
+        }
+        else //second throw, pins are only enabled if they are still standing
+        {
+            SetPin(frame.pins[0], onePin, frame.pins[0]);
+            SetPin(frame.pins[1], twoPin, frame.pins[1]);
+            SetPin(frame.pins[2], threePin, frame.pins[2]);
+            SetPin(frame.pins[3], fourPin, frame.pins[3]);
+            SetPin(frame.pins[4], fivePin, frame.pins[4]);
+            SetPin(frame.pins[5], sixPin, frame.pins[5]);
+            SetPin(frame.pins[6], sevenPin, frame.pins[6]);
+            SetPin(frame.pins[7], eightPin, frame.pins[7]);
+            SetPin(frame.pins[8], ninePin, frame.pins[8]);
+            SetPin(frame.pins[9], tenPin, frame.pins[9]);
+        }
     }
 
+    /**
+     * Sets a single pin up on the UI
+     * @param pinStanding flag to tell us if the pin is standing or not
+     * @param pinmage the ImageButton for the pin
+     * @param enabled flag on if this pin should be enabled to be interacted with.
+     */
     private void SetPin(boolean pinStanding, ImageButton pinmage,boolean enabled)
     {
-        //reset pin filter
-        pinmage.clearColorFilter();
+        //reset pin tint (setColorFilter passed with null will do this)
+        pinmage.getDrawable().setColorFilter(null);
 
         //if the pin isn't standing, mark it as not standing
         if(!pinStanding)
-            pinmage.setColorFilter(Color.GREEN);
+            pinmage.getDrawable().setTint(Color.GREEN);
 
         pinmage.setEnabled(enabled);
     }
 
+    /**
+     * Changes a pin from standing to knocked down or knocked down to standing
+     * @param view the view that called this function
+     */
     public void ChangePin(View view)
     {
+        Game.Frame frame = m_game.GetCurrentFrame();
+
         int vID = view.getId();
         if(vID == onePin.getId())
         {
+            frame.pins[0] = !frame.pins[0];
             SetPin(m_game.GetCurrentFrame().pins[0],onePin,true);
         }
         else if(vID == twoPin.getId())
         {
+            frame.pins[1] = !frame.pins[1];
             SetPin(m_game.GetCurrentFrame().pins[1],twoPin,true);
         }
         else if(vID == threePin.getId())
         {
+            frame.pins[2] = !frame.pins[2];
             SetPin(m_game.GetCurrentFrame().pins[2],threePin,true);
         }
         else if(vID == fourPin.getId())
         {
+            frame.pins[3] = !frame.pins[3];
             SetPin(m_game.GetCurrentFrame().pins[3],fourPin,true);
         }
         else if(vID == fivePin.getId())
         {
+            frame.pins[4] = !frame.pins[4];
             SetPin(m_game.GetCurrentFrame().pins[4],fivePin,true);
         }
         else if(vID == sixPin.getId())
         {
+            frame.pins[5] = !frame.pins[5];
             SetPin(m_game.GetCurrentFrame().pins[5],sixPin,true);
         }
         else if(vID == sevenPin.getId())
         {
+            frame.pins[6] = !frame.pins[6];
             SetPin(m_game.GetCurrentFrame().pins[6],sevenPin,true);
         }
         else if(vID == eightPin.getId())
         {
+            frame.pins[7] = !frame.pins[7];
             SetPin(m_game.GetCurrentFrame().pins[7],eightPin,true);
         }
         else if(vID == ninePin.getId())
         {
+            frame.pins[8] = !frame.pins[8];
             SetPin(m_game.GetCurrentFrame().pins[8],ninePin,true);
         }
         else if(vID == tenPin.getId())
         {
+            frame.pins[9] = !frame.pins[9];
             SetPin(m_game.GetCurrentFrame().pins[9],tenPin,true);
         }
     }
