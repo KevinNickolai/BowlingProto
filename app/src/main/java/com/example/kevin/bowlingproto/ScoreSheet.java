@@ -132,7 +132,7 @@ public class ScoreSheet extends AppCompatActivity {
          * @param frame the frame to get the total score for
          * @return the total score for the frame.
          */
-        public int GetTotalScoreToFrame(Frame frame)
+        private int GetTotalScoreToFrame(Frame frame)
         {
             int totalScore = 0;
 
@@ -156,7 +156,7 @@ public class ScoreSheet extends AppCompatActivity {
         private Game()
         {
             //initialize our frames
-            m_frames = new Vector<Frame>();
+            m_frames = new Vector<>();
 
             for(int i = 0; i < 9; ++i)
             {
@@ -174,30 +174,30 @@ public class ScoreSheet extends AppCompatActivity {
         private class Frame
         {
             //array of pins to tell us whether they are standing or knocked down
-            private boolean[] pins;
+            protected boolean[] pins;
 
-            protected boolean complete;
+            private boolean complete;
 
-            protected int firstThrow, secondThrow;
+            private int firstThrow, secondThrow;
             protected boolean isFirstThrow;
-            protected boolean scoreKnown;
-            protected int frameScore;
+            private boolean scoreKnown;
+            private int frameScore;
 
             //the game this frame is in.
             Game m_game;
 
             //the current state of the frame.
-            protected FrameState frameState;
+            private FrameState frameState;
 
             //the number of this frame
-            protected int frameNumber;
+            private int frameNumber;
 
             /**
              * Constructor for a frame
              * @param game The game this frame is a part of
              * @param frame the number of the frame.
              */
-            public Frame(Game game,int frame)
+            private Frame(Game game,int frame)
             {
                 m_game = game;
 
@@ -271,7 +271,10 @@ public class ScoreSheet extends AppCompatActivity {
                 if(noPinsStanding)
                 {
                     if (isFirstThrow)
+                    {
+                        isFirstThrow = false;
                         frameState = FrameState.Strike;
+                    }
                     else
                         frameState = FrameState.Spare;
                 }
@@ -294,21 +297,72 @@ public class ScoreSheet extends AppCompatActivity {
         private class TenthFrame extends Frame
         {
             //flag for the extra throw in the frame.
-            boolean extraThrow;
+            private boolean extraThrow;
+
+            //flag to tell us if we're on the second throw
+            private boolean isSecondThrow;
 
             //third throw score
-            int thirdThrow;
+            private int thirdThrow;
 
+            /**
+             * Reset the current frame; 10th frame requires extra reset steps
+             */
             @Override
             protected void ResetFrame()
             {
                 super.ResetFrame();
                 extraThrow = false;
                 thirdThrow = 0;
+                isSecondThrow = false;
+            }
+
+            /**
+             * Sweep the pins in the 10th; possibly set more pins up if necessary
+             * @return
+             */
+            @Override
+            protected boolean SweepPins()
+            {
+                if(isFirstThrow)
+                {
+                    if(super.SweepPins())
+                        extraThrow = true;
+
+                    //set the pins back up in the UI; two more throws to do.
+                    for(int i = 0; i < pins.length; ++i)
+                        pins[i] = true;
+
+                    SetPins(this);
+                    isSecondThrow = true;
+                }
+                else if(isSecondThrow)
+                {
+                    if(super.SweepPins())
+                        extraThrow = true;
+
+                    for(int i = 0; i < pins.length; ++i)
+                        pins[i] = true;
+
+                    SetPins(this);
+                    isSecondThrow = false;
+                }
+                else //third throw, just count the pins for the score
+                {
+                    for(int i = 0; i < pins.length; ++i)
+                    {
+                        //if a pin isn't standing, score it
+                        if(!pins[i])
+                            ++thirdThrow;
+                    }
+                }
+
+                //we don't check for pins standing in 10th; game's over after third throw pin sweep
+                return false;
             }
 
             //constructor for 10th frame
-            public TenthFrame(Game game)
+            private TenthFrame(Game game)
             {
                 //construct the frame as the 10th & initilize the 3rd throw.
                 super(game,10);
@@ -318,6 +372,8 @@ public class ScoreSheet extends AppCompatActivity {
 
                 //initialize the score for that third throw as 0.
                 thirdThrow = 0;
+
+                isSecondThrow = false;
             }
         }
     }
@@ -415,19 +471,27 @@ public class ScoreSheet extends AppCompatActivity {
 
         //sweep pins if this throw is complete
         boolean noPinsStanding = frame.SweepPins();
-        if(frame.isFirstThrow)
+
+        //if the frame is finished
+        if(frame.frameState != FrameState.None)
         {
-            //strike
-            if(noPinsStanding)
-                SetupUI(m_game.NextFrame());
+            SetupUI(m_game.NextFrame());
         }
-        else //second throw
+        else if(frame.frameNumber != 10) //second throw on any frame other than 10th
         {
             //enable next frame button
             m_nextFrame.setEnabled(true);
 
             //disable next throw button
             m_nextThrow.setEnabled(false);
+        }
+        else //on the 10th frame, need to check for extra throws
+        {
+
+            if(!((Game.TenthFrame)frame).isSecondThrow)
+            {
+
+            }
         }
     }
 
