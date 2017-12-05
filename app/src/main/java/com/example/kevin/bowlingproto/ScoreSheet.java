@@ -9,6 +9,9 @@ package com.example.kevin.bowlingproto;
         import android.widget.TextView;
         import java.util.Vector;
 
+/**
+ * ScoreSheet is an activity that represents a single 10 frame game of bowling
+ */
 public class ScoreSheet extends AppCompatActivity {
 
     //image buttons for our ten pins
@@ -75,6 +78,10 @@ public class ScoreSheet extends AppCompatActivity {
          */
         private Frame GetCurrentFrame(){ return m_frames.elementAt(m_currentFrame); }
 
+        /**
+         * Updates the score of the previous frame(s), in which we check if the previous frame(s)
+         * are spares or strikes, and add a score of this frame according to the previous frame(s)
+         */
         private void UpdatePreviousFrameScores()
         {
 
@@ -82,6 +89,8 @@ public class ScoreSheet extends AppCompatActivity {
             if((m_currentFrame - 1) >= 0)
             {
                 Frame previousFrame = m_frames.elementAt(m_currentFrame-1);
+
+                //a switch statement on the state of the previous frame: checking for spare or strike
                 switch(previousFrame.frameState)
                 {
                     //if the previous frame was a spare, then add this frame's first throw to that spare
@@ -176,18 +185,29 @@ public class ScoreSheet extends AppCompatActivity {
             //array of pins to tell us whether they are standing or knocked down
             protected boolean[] pins;
 
+            //this flag indicates whether or not this frame has been completely finished;
+            //"complete" means that a frame has been bowled AND The user has clicked the
+            //next frame button on the UI, indicating they are done with the frame.
             private boolean complete;
 
+            //The first and second throw # of pins knocked down
             private int firstThrow, secondThrow;
+
+            //flag to tell us which throw we're on, first or second
             protected boolean isFirstThrow;
+
+            //is our score known for the frame? i.e. is the frame complete and
+            //are subsequent frame scores known for spare and strike frames
             private boolean scoreKnown;
+
+            //the score of our frame.
             private int frameScore;
 
             //the game this frame is in.
             Game m_game;
 
             //the current state of the frame.
-            private FrameState frameState;
+            protected FrameState frameState;
 
             //the number of this frame
             private int frameNumber;
@@ -240,34 +260,29 @@ public class ScoreSheet extends AppCompatActivity {
 
             /**
              * Sweeps pins out of the frame
-             * @return true if no pins are standing
              */
-            protected boolean SweepPins()
-            {
+            protected void SweepPins() {
                 // return flag, if no pins are standing then indicate that
                 boolean noPinsStanding = true;
 
                 int score = 0;
 
-                for(int i = 0; i < pins.length;++i)
-                {
+                for(boolean pinStanding : pins){
+
                     //if a pin is standing, then this can't be a strike or spare
-                    if(pins[i])
-                    {
+                    if (pinStanding)
                         noPinsStanding = false;
-                    }
                     else //pin knocked down, add it to the score
-                    {
                         ++score;
-                    }
                 }
 
-                if(isFirstThrow)
+                //depending on which throw we're on, update the score
+                if (isFirstThrow)
                     firstThrow = score;
                 else
                     secondThrow = score;
 
-                //strike or spare
+                //checking for strike or spare
                 if(noPinsStanding)
                 {
                     if (isFirstThrow)
@@ -278,18 +293,16 @@ public class ScoreSheet extends AppCompatActivity {
                     else
                         frameState = FrameState.Spare;
                 }
-                else
+                else //no strike or spare
                 {
                     if(isFirstThrow)
                         isFirstThrow = false;
-                    else
+                    else if(frameState == FrameState.None) // making sure we don't already have a framestate applied in 10th frame.
                         frameState = FrameState.Open;
                 }
 
                 //set the pins for this frame back down.
                 SetPins(this);
-
-                return noPinsStanding;
             }
         }
 
@@ -319,26 +332,30 @@ public class ScoreSheet extends AppCompatActivity {
 
             /**
              * Sweep the pins in the 10th; possibly set more pins up if necessary
-             * @return
              */
             @Override
-            protected boolean SweepPins()
+            protected void SweepPins()
             {
                 if(isFirstThrow)
                 {
-                    if(super.SweepPins())
+                    super.SweepPins();
+                    if(frameState == FrameState.Strike)
+                    {
                         extraThrow = true;
 
-                    //set the pins back up in the UI; two more throws to do.
-                    for(int i = 0; i < pins.length; ++i)
-                        pins[i] = true;
+                        //set the pins back up in the UI; two more throws to do.
+                        for (int i = 0; i < pins.length; ++i)
+                            pins[i] = true;
 
-                    SetPins(this);
+                        SetPins(this);
+                    }
                     isSecondThrow = true;
                 }
                 else if(isSecondThrow)
                 {
-                    if(super.SweepPins())
+                    super.SweepPins();
+
+                    if(frameState == FrameState.Spare)
                         extraThrow = true;
 
                     for(int i = 0; i < pins.length; ++i)
@@ -349,16 +366,12 @@ public class ScoreSheet extends AppCompatActivity {
                 }
                 else //third throw, just count the pins for the score
                 {
-                    for(int i = 0; i < pins.length; ++i)
+                    for(boolean pinStanding : pins)
                     {
-                        //if a pin isn't standing, score it
-                        if(!pins[i])
+                        if(!pinStanding)
                             ++thirdThrow;
                     }
                 }
-
-                //we don't check for pins standing in 10th; game's over after third throw pin sweep
-                return false;
             }
 
             //constructor for 10th frame
@@ -373,6 +386,7 @@ public class ScoreSheet extends AppCompatActivity {
                 //initialize the score for that third throw as 0.
                 thirdThrow = 0;
 
+                //we do not start on the second throw
                 isSecondThrow = false;
             }
         }
@@ -470,27 +484,24 @@ public class ScoreSheet extends AppCompatActivity {
         Game.Frame frame = m_game.GetCurrentFrame();
 
         //sweep pins if this throw is complete
-        boolean noPinsStanding = frame.SweepPins();
+        frame.SweepPins();
 
         //if the frame is finished
         if(frame.frameState != FrameState.None)
         {
-            SetupUI(m_game.NextFrame());
-        }
-        else if(frame.frameNumber != 10) //second throw on any frame other than 10th
-        {
-            //enable next frame button
-            m_nextFrame.setEnabled(true);
-
-            //disable next throw button
-            m_nextThrow.setEnabled(false);
-        }
-        else //on the 10th frame, need to check for extra throws
-        {
-
-            if(!((Game.TenthFrame)frame).isSecondThrow)
+            //any frame other than the 10th
+            if(frame.frameNumber != 10)
             {
+                m_nextFrame.setEnabled(true);
 
+                m_nextThrow.setEnabled(false);
+            }
+            //if we have an extra throw and we aren't on the second throw
+            else if(((Game.TenthFrame)frame).extraThrow && !((Game.TenthFrame)frame).isSecondThrow)
+            {
+                m_nextFrame.setEnabled(true);
+
+                m_nextThrow.setEnabled(false);
             }
         }
     }
@@ -502,7 +513,7 @@ public class ScoreSheet extends AppCompatActivity {
     private void SetupUI(Game.Frame frame)
     {
         //set our frame number text view
-        m_frameNumber.setText("Frame " + frame.frameNumber);
+        m_frameNumber.setText("Frame ;" + frame.frameNumber);
 
         //enable the next frame button if this frame is already complete; disable if incomplete.
         m_nextFrame.setEnabled(frame.complete);
