@@ -1,6 +1,8 @@
 package com.example.kevin.bowlingproto;
 
         import android.graphics.Color;
+        import android.graphics.ColorFilter;
+        import android.graphics.PorterDuff;
         import android.support.v7.app.AppCompatActivity;
         import android.os.Bundle;
         import android.view.View;
@@ -149,13 +151,9 @@ public class ScoreSheet extends AppCompatActivity {
             {
                 //score is known for this frame, add its score to the total
                 if(m_frames.elementAt(i).scoreKnown)
-                {
                     totalScore += m_frames.elementAt(i).frameScore;
-                }
                 else //since the score isn't known for a frame, it can't be known for frames after it.
-                {
                     return -1;
-                }
             }
 
             return totalScore;
@@ -254,6 +252,7 @@ public class ScoreSheet extends AppCompatActivity {
                 firstThrow = 0;
                 secondThrow = 0;
                 frameState = FrameState.None;
+                frameScore = 0;
                 for(int i = 0; i < pins.length;++i)
                     pins[i] = true;
             }
@@ -280,7 +279,7 @@ public class ScoreSheet extends AppCompatActivity {
                 if (isFirstThrow)
                     firstThrow = score;
                 else
-                    secondThrow = score;
+                    secondThrow = score - firstThrow;
 
                 //checking for strike or spare
                 if(noPinsStanding)
@@ -292,13 +291,20 @@ public class ScoreSheet extends AppCompatActivity {
                     }
                     else
                         frameState = FrameState.Spare;
+
+                    //no pins standing, frameScore goes up by 10.
+                    frameScore += 10;
                 }
                 else //no strike or spare
                 {
                     if(isFirstThrow)
                         isFirstThrow = false;
                     else if(frameState == FrameState.None) // making sure we don't already have a framestate applied in 10th frame.
+                    {
                         frameState = FrameState.Open;
+                        scoreKnown = true;
+                        frameScore = firstThrow + secondThrow;
+                    }
                 }
 
                 //set the pins for this frame back down.
@@ -324,10 +330,10 @@ public class ScoreSheet extends AppCompatActivity {
             @Override
             protected void ResetFrame()
             {
-                super.ResetFrame();
                 extraThrow = false;
                 thirdThrow = 0;
                 isSecondThrow = false;
+                super.ResetFrame();
             }
 
             /**
@@ -377,7 +383,7 @@ public class ScoreSheet extends AppCompatActivity {
             //constructor for 10th frame
             private TenthFrame(Game game)
             {
-                //construct the frame as the 10th & initilize the 3rd throw.
+                //construct the frame as the 10th & initialize the 3rd throw.
                 super(game,10);
 
                 //can have an extra throw on the 10th frame, not by default though; need spare or strike in frame.
@@ -513,7 +519,7 @@ public class ScoreSheet extends AppCompatActivity {
     private void SetupUI(Game.Frame frame)
     {
         //set our frame number text view
-        m_frameNumber.setText("Frame ;" + frame.frameNumber);
+        m_frameNumber.setText("Frame " + frame.frameNumber);
 
         //enable the next frame button if this frame is already complete; disable if incomplete.
         m_nextFrame.setEnabled(frame.complete);
@@ -528,7 +534,7 @@ public class ScoreSheet extends AppCompatActivity {
         m_nextThrow.setEnabled(frame.isFirstThrow);
 
         //setting score
-        int score = m_game.GetTotalScoreToFrame(m_game.GetCurrentFrame());
+        int score = m_game.GetTotalScoreToFrame(frame);
 
         //score not yet known
         if(score == -1)
@@ -537,7 +543,7 @@ public class ScoreSheet extends AppCompatActivity {
         }
         else
         {
-            m_scoreSoFar.setText(score);
+            m_scoreSoFar.setText(Integer.toString(score));
         }
 
         //set the pins for this frame.
@@ -601,14 +607,14 @@ public class ScoreSheet extends AppCompatActivity {
      */
     private void SetPin(boolean pinStanding, ImageButton pinmage,boolean enabled)
     {
-        //reset pin tint (setColorFilter passed with null will do this)
-        pinmage.getDrawable().setColorFilter(null);
-
-        //if the pin isn't standing, mark it as not standing
-        if(!pinStanding)
-            pinmage.getDrawable().setTint(Color.GREEN);
 
         pinmage.setEnabled(enabled);
+
+        //if the pin isn't standing, mark it as not standing
+        if (!pinStanding)
+            pinmage.getDrawable().setColorFilter(Color.GREEN, PorterDuff.Mode.MULTIPLY);
+        else if(!enabled)
+            pinmage.getDrawable().setColorFilter(Color.GRAY, PorterDuff.Mode.MULTIPLY);
     }
 
     /**
