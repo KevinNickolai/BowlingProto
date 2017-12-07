@@ -1,7 +1,5 @@
 package com.example.kevin.bowlingproto;
-
         import android.graphics.Color;
-        import android.graphics.ColorFilter;
         import android.graphics.PorterDuff;
         import android.support.v7.app.AppCompatActivity;
         import android.os.Bundle;
@@ -16,10 +14,12 @@ package com.example.kevin.bowlingproto;
  */
 public class ScoreSheet extends AppCompatActivity {
 
+    //number of frames in a game
+    public final int NUMBER_OF_FRAMES = 10;
+
     //image buttons for our ten pins
     private ImageButton onePin, twoPin, threePin, fourPin, fivePin,
                         sixPin, sevenPin, eightPin, ninePin, tenPin;
-
 
     //enumeration describing the frame's different states.
     enum FrameState {None, Open, Strike, Spare}
@@ -27,11 +27,11 @@ public class ScoreSheet extends AppCompatActivity {
     //the game we're currently playing
     public Game m_game;
 
-    //frame information
+    //frame information TextViews
     private TextView m_frameNumber;
     private TextView m_scoreSoFar;
 
-    //buttons for navigation around the game
+    //Navigation and Indication buttons for users to manage their game
     private Button m_previousFrame;
     private Button m_nextFrame;
     private Button m_resetFrame;
@@ -147,6 +147,7 @@ public class ScoreSheet extends AppCompatActivity {
         {
             int totalScore = 0;
 
+            //go through every frame up to the frame parameter we passed in.
             for(int i = 0; i < frame.frameNumber; ++i)
             {
                 //score is known for this frame, add its score to the total
@@ -165,12 +166,12 @@ public class ScoreSheet extends AppCompatActivity {
             //initialize our frames
             m_frames = new Vector<>();
 
-            for(int i = 0; i < 9; ++i)
+            //initialize the first 9 frames sequentially, then the 10th frame.
+            for(int i = 0; i < NUMBER_OF_FRAMES - 1; ++i)
             {
                 //initialize all frames with their respective frameNumbers, 1-9
                 m_frames.add(new Frame(this,i+1));
             }
-
             m_frames.add(new TenthFrame(this));
 
             //the frame we start on is the first frame, located at index 0.
@@ -199,7 +200,7 @@ public class ScoreSheet extends AppCompatActivity {
             private boolean scoreKnown;
 
             //the score of our frame.
-            private int frameScore;
+            protected int frameScore;
 
             //the game this frame is in.
             Game m_game;
@@ -261,11 +262,14 @@ public class ScoreSheet extends AppCompatActivity {
              * Sweeps pins out of the frame
              */
             protected void SweepPins() {
-                // return flag, if no pins are standing then indicate that
-                boolean noPinsStanding = true;
 
+                //score to keep track of how many pins we've knocked down
                 int score = 0;
 
+                //flag to tell us whether or not we have pins left standing
+                boolean noPinsStanding = true;
+
+                //count the pins knocked down
                 for(boolean pinStanding : pins){
 
                     //if a pin is standing, then this can't be a strike or spare
@@ -292,8 +296,8 @@ public class ScoreSheet extends AppCompatActivity {
                     else
                         frameState = FrameState.Spare;
 
-                    //no pins standing, frameScore goes up by 10.
-                    frameScore += 10;
+                    //no pins standing, frameScore is 10 no matter what.
+                    frameScore = 10;
                 }
                 else //no strike or spare
                 {
@@ -359,24 +363,31 @@ public class ScoreSheet extends AppCompatActivity {
                 }
                 else if(isSecondThrow)
                 {
-                    super.SweepPins();
+                    if(frameState != FrameState.Strike)
+                        super.SweepPins();
+                    else
+                    {
+                        //strike before in the 10th, now just need to count the next two throws' pins
+                    }
+                        if (frameState == FrameState.Spare) {
+                            extraThrow = true;
 
-                    if(frameState == FrameState.Spare)
-                        extraThrow = true;
+                            for (int i = 0; i < pins.length; ++i)
+                                pins[i] = true;
 
-                    for(int i = 0; i < pins.length; ++i)
-                        pins[i] = true;
+                            SetPins(this);
+                        }
 
-                    SetPins(this);
-                    isSecondThrow = false;
+                        isSecondThrow = false;
+
                 }
                 else //third throw, just count the pins for the score
                 {
                     for(boolean pinStanding : pins)
-                    {
                         if(!pinStanding)
                             ++thirdThrow;
-                    }
+
+                    frameScore += thirdThrow;
                 }
             }
 
@@ -422,25 +433,27 @@ public class ScoreSheet extends AppCompatActivity {
      */
     public void InitializeViews()
     {
-        //associating all of our views
-        m_frameNumber = (TextView)findViewById(R.id.textViewFrameNumber);
-        m_scoreSoFar = (TextView)findViewById(R.id.textViewFrameTotalScore);
-        m_previousFrame = (Button)findViewById(R.id.buttonPreviousFrame);
-        m_nextFrame = (Button)findViewById(R.id.buttonNextFrame);
-        m_resetFrame = (Button)findViewById(R.id.buttonResetFrame);
-        m_nextThrow = (Button)findViewById(R.id.buttonNextThrow);
+        //associating all TextViews
+        m_frameNumber = findViewById(R.id.textViewFrameNumber);
+        m_scoreSoFar = findViewById(R.id.textViewFrameTotalScore);
 
-        //initialize all ImageButtons to a set pin
-        onePin = (ImageButton)findViewById(R.id.imgBtnOnePin);
-        twoPin = (ImageButton)findViewById(R.id.imgBtnTwoPin);
-        threePin = (ImageButton)findViewById(R.id.imgBtnThreePin);
-        fourPin = (ImageButton)findViewById(R.id.imgBtnFourPin);
-        fivePin = (ImageButton)findViewById(R.id.imgBtnFivePin);
-        sixPin = (ImageButton)findViewById(R.id.imgBtnSixPin);
-        sevenPin = (ImageButton)findViewById(R.id.imgBtnSevenPin);
-        eightPin = (ImageButton)findViewById(R.id.imgBtnEightPin);
-        ninePin = (ImageButton)findViewById(R.id.imgBtnNinePin);
-        tenPin = (ImageButton)findViewById(R.id.imgBtnTenPin);
+        //associating all Buttons
+        m_previousFrame = findViewById(R.id.buttonPreviousFrame);
+        m_nextFrame = findViewById(R.id.buttonNextFrame);
+        m_resetFrame = findViewById(R.id.buttonResetFrame);
+        m_nextThrow = findViewById(R.id.buttonNextThrow);
+
+        //associate all ImageButtons to its set pin.
+        onePin = findViewById(R.id.imgBtnOnePin);
+        twoPin = findViewById(R.id.imgBtnTwoPin);
+        threePin = findViewById(R.id.imgBtnThreePin);
+        fourPin = findViewById(R.id.imgBtnFourPin);
+        fivePin = findViewById(R.id.imgBtnFivePin);
+        sixPin = findViewById(R.id.imgBtnSixPin);
+        sevenPin = findViewById(R.id.imgBtnSevenPin);
+        eightPin = findViewById(R.id.imgBtnEightPin);
+        ninePin = findViewById(R.id.imgBtnNinePin);
+        tenPin = findViewById(R.id.imgBtnTenPin);
     }
 
     /**
@@ -488,8 +501,6 @@ public class ScoreSheet extends AppCompatActivity {
     public void onNextThrow(View view)
     {
         Game.Frame frame = m_game.GetCurrentFrame();
-
-        //sweep pins if this throw is complete
         frame.SweepPins();
 
         //if the frame is finished
@@ -502,7 +513,7 @@ public class ScoreSheet extends AppCompatActivity {
 
                 m_nextThrow.setEnabled(false);
             }
-            //if we have an extra throw and we aren't on the second throw
+            //we're on the 10th frame, if we have an extra throw and we aren't on the second throw there are no more throws after
             else if(((Game.TenthFrame)frame).extraThrow && !((Game.TenthFrame)frame).isSecondThrow)
             {
                 m_nextFrame.setEnabled(true);
@@ -521,13 +532,13 @@ public class ScoreSheet extends AppCompatActivity {
         //set our frame number text view
         m_frameNumber.setText("Frame " + frame.frameNumber);
 
-        //enable the next frame button if this frame is already complete; disable if incomplete.
+        //m_nextFrame should be enabled on setup only if the frame is complete.
         m_nextFrame.setEnabled(frame.complete);
 
-        //enable the reset frame button only if the frame is incomplete.
+        //m_resetFrame should be enabled on setup only if the frame is not complete.
         m_resetFrame.setEnabled(!frame.complete);
 
-        //on the first frame, there are no other frames to go back to; disable previous frame button on the first frame only.
+        //disable m_previousFrame on the first frame only.
         m_previousFrame.setEnabled(frame.frameNumber != 1);
 
         //enable the next throw button if we're on the first throw of the frame.
@@ -538,13 +549,9 @@ public class ScoreSheet extends AppCompatActivity {
 
         //score not yet known
         if(score == -1)
-        {
             m_scoreSoFar.setText("");
-        }
-        else
-        {
+        else    //score known, set the textView for score
             m_scoreSoFar.setText(Integer.toString(score));
-        }
 
         //set the pins for this frame.
         SetPins(frame);
@@ -607,7 +614,7 @@ public class ScoreSheet extends AppCompatActivity {
      */
     private void SetPin(boolean pinStanding, ImageButton pinmage,boolean enabled)
     {
-
+        //disable the ImageButton of the pin
         pinmage.setEnabled(enabled);
 
         //if the pin isn't standing, mark it as not standing
