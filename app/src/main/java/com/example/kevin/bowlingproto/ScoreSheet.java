@@ -190,7 +190,7 @@ public class ScoreSheet extends AppCompatActivity {
             private boolean complete;
 
             //The first and second throw # of pins knocked down
-            private int firstThrow, secondThrow;
+            protected int firstThrow, secondThrow;
 
             //flag to tell us which throw we're on, first or second
             protected boolean isFirstThrow;
@@ -364,22 +364,39 @@ public class ScoreSheet extends AppCompatActivity {
                 else if(isSecondThrow)
                 {
                     if(frameState != FrameState.Strike)
-                        super.SweepPins();
-                    else
                     {
-                        //strike before in the 10th, now just need to count the next two throws' pins
-                    }
-                        if (frameState == FrameState.Spare) {
+                        super.SweepPins();
+                        if (frameState == FrameState.Spare)
+                        {
                             extraThrow = true;
-
                             for (int i = 0; i < pins.length; ++i)
                                 pins[i] = true;
 
                             SetPins(this);
                         }
+                    }
+                    else
+                    {
+                        boolean noPinsStanding = true;
+                        //strike before in the 10th, now just need to count the next two throws' pins
+                        for(boolean pinStanding : pins)
+                        {
+                            if(!pinStanding)
+                                ++secondThrow;
+                            else
+                                noPinsStanding = false;
+                        }
 
-                        isSecondThrow = false;
+                        if(noPinsStanding)
+                        {
+                            for (int i = 0; i < pins.length; ++i)
+                                pins[i] = true;
 
+                            SetPins(this);
+
+                        }
+                    }
+                    isSecondThrow = false;
                 }
                 else //third throw, just count the pins for the score
                 {
