@@ -550,7 +550,7 @@ public class ScoreSheet extends AppCompatActivity {
         m_frameNumber.setText("Frame " + frame.frameNumber);
 
         //m_nextFrame should be enabled on setup only if the frame is complete.
-        m_nextFrame.setEnabled(frame.complete);
+        m_nextFrame.setEnabled(frame.frameState != FrameState.None);
 
         //m_resetFrame should be enabled on setup only if the frame is not complete.
         m_resetFrame.setEnabled(!frame.complete);
@@ -558,8 +558,8 @@ public class ScoreSheet extends AppCompatActivity {
         //disable m_previousFrame on the first frame only.
         m_previousFrame.setEnabled(frame.frameNumber != 1);
 
-        //enable the next throw button if we're on the first throw of the frame.
-        m_nextThrow.setEnabled(frame.isFirstThrow);
+        //enable the next throw button if the frame doesn't have a set framestate yet.
+        m_nextThrow.setEnabled(frame.frameState == FrameState.None);
 
         //setting score
         int score = m_game.GetTotalScoreToFrame(frame);
@@ -581,7 +581,7 @@ public class ScoreSheet extends AppCompatActivity {
     private void SetPins(Game.Frame frame)
     {
         //if the frame is complete, no pins should be enabled.
-        if(frame.complete)
+        if(frame.frameState != FrameState.None)
         {
             SetPin(frame.pins[0], onePin, false);
             SetPin(frame.pins[1], twoPin, false);
@@ -631,14 +631,19 @@ public class ScoreSheet extends AppCompatActivity {
      */
     private void SetPin(boolean pinStanding, ImageButton pinmage,boolean enabled)
     {
-        //disable the ImageButton of the pin
-        pinmage.setEnabled(enabled);
+        //mutate the imageButton drawable to assure the background isn't used on other views.
+        pinmage.getDrawable().mutate();
 
         //if the pin isn't standing, mark it as not standing
         if (!pinStanding)
             pinmage.getDrawable().setColorFilter(Color.GREEN, PorterDuff.Mode.MULTIPLY);
         else if(!enabled)
             pinmage.getDrawable().setColorFilter(Color.GRAY, PorterDuff.Mode.MULTIPLY);
+        else
+            pinmage.getDrawable().clearColorFilter();
+
+        //disable the ImageButton of the pin
+        pinmage.setClickable(enabled);
     }
 
     /**
